@@ -35,6 +35,10 @@ export interface PondState {
   reducedMotion: boolean;
   /** Increments on every scene reset so systems can drop transient state. */
   sceneVersion: number;
+  /** Measured by the performance monitor; 0 until the first sample. */
+  fps: number;
+  /** True once adaptive quality has stopped adjusting. */
+  qualityLocked: boolean;
 
   addFish: (variety?: KoiVariety) => boolean;
   removeFish: (id: string) => void;
@@ -49,6 +53,7 @@ export interface PondState {
   setPaused: (paused: boolean) => void;
   setQualityLevel: (level: number) => void;
   setReducedMotion: (reduced: boolean) => void;
+  setPerformance: (fps: number, qualityLocked?: boolean) => void;
 }
 
 let nextId = 0;
@@ -82,6 +87,8 @@ export const usePondStore = create<PondState>()((set, get) => ({
   qualityLevel: pondConfig.quality.desktopStartLevel,
   reducedMotion: false,
   sceneVersion: 0,
+  fps: 0,
+  qualityLocked: false,
 
   addFish: (variety) => {
     // Leaving fish still occupy GPU resources until their animation ends.
@@ -111,4 +118,6 @@ export const usePondStore = create<PondState>()((set, get) => ({
   setPaused: (paused) => set({ paused }),
   setQualityLevel: (qualityLevel) => set({ qualityLevel }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
+  setPerformance: (fps, qualityLocked) =>
+    set((s) => ({ fps: Math.round(fps), qualityLocked: qualityLocked ?? s.qualityLocked })),
 }));

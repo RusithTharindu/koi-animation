@@ -7,6 +7,7 @@ import { usePondStore } from "@/store/pondStore";
 import { Button } from "./Button";
 import { FishControls } from "./FishControls";
 import { ModePicker } from "./ModePicker";
+import { PerformanceBadge } from "./PerformanceBadge";
 import { WaterControls } from "./WaterControls";
 
 gsap.registerPlugin(useGSAP);
@@ -106,9 +107,12 @@ export function ControlPanel() {
             </Button>
             <Button onClick={resetScene}>Reset scene</Button>
           </div>
-          <p data-stagger className="text-[10px] leading-relaxed text-white/40">
-            Keys: 1–6 cursor modes · P pause · Esc stop removing
-          </p>
+          <div data-stagger className="space-y-1">
+            <p className="text-[10px] leading-relaxed text-white/40">
+              Keys: 1–6 cursor modes · P pause · Esc stop removing
+            </p>
+            <PerformanceBadge />
+          </div>
         </div>
       </div>
     </aside>
