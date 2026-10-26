@@ -5,6 +5,7 @@ import { useReducedMotionSync } from "@/lib/useReducedMotion";
 import { CustomCursor } from "@/interaction/CustomCursor";
 import { usePondStore } from "@/store/pondStore";
 import { ControlPanel } from "./ControlPanel";
+import { Credits } from "./Credits";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 
 // WebGL needs the browser: never prerender the canvas.
@@ -21,6 +22,7 @@ export default function PondApp() {
     <main className="pond-root fixed inset-0 overflow-hidden bg-[#0d2a2a] select-none">
       <PondCanvas />
       <ControlPanel />
+      <Credits />
       {paused && (
         <div
           role="status"
