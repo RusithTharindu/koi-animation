@@ -1,3 +1,4 @@
+import gsap from "gsap";
 import {
   HalfFloatType,
   LinearFilter,
@@ -7,10 +8,11 @@ import {
   type WebGLRenderer,
 } from "three";
 import { pondConfig } from "@/config/pond.config";
-import { usePondStore } from "@/store/pondStore";
 import { FishSystem } from "@/fish/FishSystem";
+import { FoodSystem } from "@/fish/FoodSystem";
 import { InputController } from "@/interaction/InputController";
 import { ModeController } from "@/interaction/ModeController";
+import { usePondStore } from "@/store/pondStore";
 import { PondFloor } from "@/water/PondFloor";
 import { RippleSimulation } from "@/water/RippleSimulation";
 import { WaterSurface } from "@/water/WaterSurface";
@@ -22,7 +24,7 @@ import { createSharedUniforms } from "./sharedUniforms";
  * React only mounts it; all simulation and rendering happens here so the
  * frame loop never triggers React renders.
  *
- * Frame order: input effects -> simulation step -> underwater pass -> water composite.
+ * Frame order: input effects -> fish & food -> ripple step -> underwater pass -> water composite.
  */
 export class PondEngine {
   readonly shared = createSharedUniforms();
@@ -34,9 +36,13 @@ export class PondEngine {
   private readonly floor: PondFloor;
   private readonly water: WaterSurface;
   private readonly fish: FishSystem;
+  private readonly food: FoodSystem;
   private readonly input: InputController;
   private readonly modes: ModeController;
   private readonly lighting = createLightingState();
+  /** Smoothed time of day; tweened towards the slider value. */
+  private readonly timeOfDay: { value: number } = { value: pondConfig.lighting.defaultTimeOfDay };
+  private readonly unsubscribe: () => void;
 
   private worldW = 1;
   private worldH = 1;
@@ -57,19 +63,47 @@ export class PondEngine {
     });
     this.water.setUnderwater(this.underwaterTarget.texture);
 
-    this.underwaterScene.add(this.floor.mesh);
     this.fish = new FishSystem(this.underwaterScene, this.shared);
+    this.food = new FoodSystem(this.shared, (x, y) =>
+      this.ripple(x, y, pondConfig.water.clickRadius * 0.45, pondConfig.water.clickStrength * 0.35),
+    );
+    this.fish.influences.push(this.food.influence);
+
+    this.underwaterScene.add(this.floor.mesh, this.food.points);
     this.mainScene.add(this.water.mesh);
     this.camera.position.z = 5;
 
     this.modes = new ModeController({
       ripple: (x, y, radius, strength) => this.ripple(x, y, radius, strength),
+      fish: this.fish,
+      food: this.food,
+      pointers: () => this.input.pointers,
+      bounds: () => ({ halfW: this.worldW / 2, halfH: this.worldH / 2 }),
     });
     this.input = new InputController(
       renderer.domElement,
       (cx, cy, out) => this.clientToWorld(cx, cy, out),
       this.modes,
     );
+
+    const initial = usePondStore.getState();
+    this.timeOfDay.value = initial.params.timeOfDay;
+    this.unsubscribe = usePondStore.subscribe((state, prev) => {
+      if (state.mode !== prev.mode) this.modes.reset();
+      if (state.paused !== prev.paused) this.food.setPaused(state.paused);
+      if (state.params.timeOfDay !== prev.params.timeOfDay) {
+        gsap.to(this.timeOfDay, {
+          value: state.params.timeOfDay,
+          duration: state.reducedMotion ? 0 : pondConfig.lighting.transitionDuration,
+          ease: "sine.inOut",
+          overwrite: true,
+        });
+      }
+      if (state.sceneVersion !== prev.sceneVersion) {
+        this.food.clear();
+        this.sim.clear();
+      }
+    });
   }
 
   /** Applies the user's ripple strength (and reduced-motion scaling) to a disturbance. */
@@ -110,7 +144,9 @@ export class PondEngine {
     this.fish.setBounds(this.worldW, this.worldH);
 
     const scale = level.underwaterScale * dpr;
-    this.underwaterTarget.setSize(Math.max(1, Math.round(cssW * scale)), Math.max(1, Math.round(cssH * scale)));
+    const h = Math.max(1, Math.round(cssH * scale));
+    this.underwaterTarget.setSize(Math.max(1, Math.round(cssW * scale)), h);
+    this.food.setPixelsPerUnit(h / this.worldH);
   }
 
   frame(delta: number, elapsed: number) {
@@ -118,16 +154,19 @@ export class PondEngine {
     const state = usePondStore.getState();
 
     this.shared.uTime.value = elapsed;
-    computeLighting(pondConfig.lighting.defaultTimeOfDay, this.lighting);
+    computeLighting(this.timeOfDay.value, this.lighting);
     this.applyLighting();
 
+    this.input.decay(dt);
     if (state.paused) {
       this.sim.discardDrops();
     } else {
+      this.modes.tick(dt);
       this.fish.update(dt);
       this.sim.step(dt, state.params.rippleDamping);
     }
     this.fish.syncUniforms();
+    this.food.update();
     this.shared.uSim.value = this.sim.texture;
 
     const r = this.renderer;
@@ -138,10 +177,13 @@ export class PondEngine {
   }
 
   dispose() {
+    this.unsubscribe();
+    gsap.killTweensOf(this.timeOfDay);
     this.input.dispose();
     this.sim.dispose();
     this.floor.dispose();
     this.fish.dispose();
+    this.food.dispose();
     this.water.dispose();
     this.underwaterTarget.dispose();
     this.mainScene.clear();

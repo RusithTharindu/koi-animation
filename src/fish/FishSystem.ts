@@ -2,6 +2,7 @@ import gsap from "gsap";
 import { Scene } from "three";
 import { pondConfig } from "@/config/pond.config";
 import { clamp, distToSegmentSq, randRange } from "@/lib/math";
+import { TweenGroup } from "@/lib/TweenGroup";
 import type { SharedUniforms } from "@/scene/sharedUniforms";
 import { usePondStore, type FishMeta } from "@/store/pondStore";
 import { createKoiGeometry } from "./KoiGeometry";
@@ -32,13 +33,14 @@ export class FishSystem {
 
   private readonly geometry = createKoiGeometry();
   private readonly byId = new Map<string, Koi>();
-  private readonly tweens = gsap.context(() => {});
+  private readonly tweens = new TweenGroup();
+  /** Despawns finish even while the pond is paused, so removing a koi always gives feedback. */
+  private readonly exitTweens = new TweenGroup();
   private readonly unsubscribe: () => void;
   private readonly acc: SteerAccumulator = { fx: 0, fy: 0, speedMul: 1, depth: -1 };
   private halfW = 5;
   private halfH = 5;
   private hasBounds = false;
-  private paused = false;
 
   constructor(
     private readonly scene: Scene,
@@ -46,7 +48,7 @@ export class FishSystem {
   ) {
     this.unsubscribe = usePondStore.subscribe((state, prev) => {
       if (state.fish !== prev.fish) this.reconcile(state.fish);
-      if (state.paused !== prev.paused) this.setPaused(state.paused);
+      if (state.paused !== prev.paused) this.tweens.setPaused(state.paused);
     });
   }
 
@@ -105,7 +107,7 @@ export class FishSystem {
     koi.scatterCooldown = pondConfig.interaction.scatterCooldown;
     koi.fleeAngle = Math.atan2(koi.y - fromY, koi.x - fromX);
     koi.targetDepth = clamp(koi.targetDepth + 0.25, 0, pondConfig.fish.depth.max);
-    this.tween(koi, () =>
+    this.tween(() =>
       gsap
         .timeline()
         .to(koi.behaviour, { panic: clamp(intensity, 0, 1), duration: 0.12, ease: "power2.out" })
@@ -116,6 +118,7 @@ export class FishSystem {
   dispose() {
     this.unsubscribe();
     this.tweens.kill();
+    this.exitTweens.kill();
     for (const koi of this.fish) {
       this.scene.remove(koi.mesh, koi.shadow);
       koi.dispose();
@@ -165,7 +168,7 @@ export class FishSystem {
     // Rise up from the depths.
     koi.behaviour.dive = 0.6;
     const duration = pondConfig.fish.spawnDuration * (initial ? 1.6 : 1);
-    this.tween(koi, () =>
+    this.tween(() =>
       gsap.to(koi.behaviour, {
         appear: 1,
         dive: 0,
@@ -179,7 +182,8 @@ export class FishSystem {
   private despawn(koi: Koi) {
     koi.leaving = true;
     if (this.hoveredId === koi.id) this.hoveredId = null;
-    this.tween(koi, () =>
+    gsap.killTweensOf(koi.behaviour);
+    this.exitTweens.add(() =>
       gsap.to(koi.behaviour, {
         appear: 0,
         dive: 0.7,
@@ -200,21 +204,9 @@ export class FishSystem {
     if (i >= 0) this.fish.splice(i, 1);
   }
 
-  /** Creates a tween inside the system's GSAP context so it is paused and cleaned up with it. */
-  private tween(koi: Koi, create: () => gsap.core.Animation) {
-    this.tweens.add(() => {
-      const anim = create();
-      if (this.paused) anim.pause();
-    });
-    void koi;
-  }
-
-  private setPaused(paused: boolean) {
-    this.paused = paused;
-    for (const t of this.tweens.getTweens()) {
-      if (paused) t.pause();
-      else t.resume();
-    }
+  /** Starts a koi animation inside the system's tween group (paused with the pond, killed on dispose). */
+  private tween(create: () => gsap.core.Animation) {
+    this.tweens.add(create);
   }
 
   private steer(koi: Koi, dt: number) {
@@ -300,7 +292,7 @@ export class FishSystem {
     if (!koi.leaving && b.panic < 0.05 && koi.idleTimer <= 0 && koi.rng() < cfg.idle.chancePerSecond * dt) {
       const hold = randRange(cfg.idle.durationMin, cfg.idle.durationMax, koi.rng);
       koi.idleTimer = hold + 3;
-      this.tween(koi, () =>
+      this.tween(() =>
         gsap
           .timeline()
           .to(b, { speedMul: cfg.idleSpeed / cfg.cruiseSpeed, duration: 1.8, ease: "sine.inOut" })

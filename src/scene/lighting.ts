@@ -16,7 +16,7 @@ const LOW_SUN = new Color(1.0, 0.62, 0.32);
 const MOON = new Color(0.32, 0.42, 0.68);
 
 const DAY_AMBIENT = new Color(0.56, 0.62, 0.6);
-const DUSK_AMBIENT = new Color(0.46, 0.38, 0.4);
+const DUSK_AMBIENT = new Color(0.66, 0.52, 0.5);
 const NIGHT_AMBIENT = new Color(0.07, 0.1, 0.17);
 
 const DAY_SKY = new Color(0.62, 0.78, 0.86);
@@ -24,7 +24,7 @@ const DUSK_SKY = new Color(0.95, 0.62, 0.45);
 const NIGHT_SKY = new Color(0.06, 0.09, 0.18);
 
 const DAY_TINT = new Color(0.1, 0.27, 0.25);
-const DUSK_TINT = new Color(0.14, 0.17, 0.16);
+const DUSK_TINT = new Color(0.24, 0.22, 0.19);
 const NIGHT_TINT = new Color(0.01, 0.04, 0.07);
 
 /**
@@ -35,7 +35,7 @@ export function computeLighting(t: number, out: LightingState): LightingState {
   const a = (t - 0.25) * TAU; // 0 at sunrise, PI/2 at noon
   const elevation = Math.sin(a);
   const day = smoothstep(-0.12, 0.25, elevation);
-  const golden = 1 - smoothstep(0.05, 0.55, Math.abs(elevation)) ;
+  const golden = 1 - smoothstep(0.05, 0.55, Math.abs(elevation));
   const isNight = elevation < 0;
 
   // Sun travels east -> west; the moon takes over at night.

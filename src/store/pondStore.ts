@@ -33,6 +33,8 @@ export interface PondState {
   paused: boolean;
   qualityLevel: number;
   reducedMotion: boolean;
+  /** Increments on every scene reset so systems can drop transient state. */
+  sceneVersion: number;
 
   addFish: (variety?: KoiVariety) => boolean;
   removeFish: (id: string) => void;
@@ -79,6 +81,7 @@ export const usePondStore = create<PondState>()((set, get) => ({
   paused: false,
   qualityLevel: pondConfig.quality.desktopStartLevel,
   reducedMotion: false,
+  sceneVersion: 0,
 
   addFish: (variety) => {
     // Leaving fish still occupy GPU resources until their animation ends.
@@ -95,7 +98,13 @@ export const usePondStore = create<PondState>()((set, get) => ({
   clearFish: () => set((s) => ({ fish: s.fish.map((f) => (f.leaving ? f : { ...f, leaving: true })) })),
   finalizeRemoval: (id) => set((s) => ({ fish: s.fish.filter((f) => f.id !== id) })),
   resetScene: () =>
-    set({ fish: defaultFish(), params: defaultParams(), mode: "ripple", paused: false }),
+    set((s) => ({
+      fish: defaultFish(),
+      params: defaultParams(),
+      mode: "ripple",
+      paused: false,
+      sceneVersion: s.sceneVersion + 1,
+    })),
 
   setMode: (mode) => set({ mode }),
   setParam: (key, value) => set((s) => ({ params: { ...s.params, [key]: value } })),

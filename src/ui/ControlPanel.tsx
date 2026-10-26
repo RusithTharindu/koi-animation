@@ -2,20 +2,35 @@
 
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { usePondStore } from "@/store/pondStore";
 import { Button } from "./Button";
 import { FishControls } from "./FishControls";
+import { ModePicker } from "./ModePicker";
+import { WaterControls } from "./WaterControls";
 
 gsap.registerPlugin(useGSAP);
 
+const SMALL_SCREEN = "(max-width: 640px)";
+const subscribeSmall = (cb: () => void) => {
+  const mq = window.matchMedia(SMALL_SCREEN);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+};
+const isSmallScreen = () => window.matchMedia(SMALL_SCREEN).matches;
+
 /** Collapsible glass panel floating over the pond. */
 export function ControlPanel() {
-  const [open, setOpen] = useState(true);
+  // On phones the panel would cover the pond, so it starts collapsed until the user opens it.
+  const small = useSyncExternalStore(subscribeSmall, isSmallScreen, () => false);
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? !small;
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePondStore((s) => s.reducedMotion);
   const resetScene = usePondStore((s) => s.resetScene);
+  const paused = usePondStore((s) => s.paused);
+  const setPaused = usePondStore((s) => s.setPaused);
 
   useGSAP(
     () => {
@@ -52,13 +67,14 @@ export function ControlPanel() {
   return (
     <aside
       ref={panelRef}
+      data-ui
       // Stop pointer events from reaching the pond underneath.
       onPointerDown={(e) => e.stopPropagation()}
       className="pointer-events-auto absolute top-4 right-4 z-20 w-[min(320px,calc(100vw-2rem))] rounded-2xl border border-white/15 bg-[#0b1f1f]/55 text-white shadow-2xl shadow-black/40 backdrop-blur-xl"
     >
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setUserOpen(!open)}
         aria-expanded={open}
         aria-controls="pond-controls"
         className="flex w-full items-center justify-between px-4 py-3 text-left"
@@ -76,13 +92,23 @@ export function ControlPanel() {
       <div ref={bodyRef} id="pond-controls" className="overflow-hidden">
         <div className="max-h-[calc(100dvh-6rem)] space-y-5 overflow-y-auto px-4 pb-4">
           <div data-stagger>
+            <ModePicker />
+          </div>
+          <div data-stagger className="border-t border-white/10 pt-4">
             <FishControls />
           </div>
           <div data-stagger className="border-t border-white/10 pt-4">
-            <Button onClick={resetScene} className="w-full">
-              Reset to default scene
-            </Button>
+            <WaterControls />
           </div>
+          <div data-stagger className="grid grid-cols-2 gap-1.5 border-t border-white/10 pt-4">
+            <Button tone={paused ? "active" : "default"} aria-pressed={paused} onClick={() => setPaused(!paused)}>
+              {paused ? "▶ Resume" : "❚❚ Pause"}
+            </Button>
+            <Button onClick={resetScene}>Reset scene</Button>
+          </div>
+          <p data-stagger className="text-[10px] leading-relaxed text-white/40">
+            Keys: 1–6 cursor modes · P pause · Esc stop removing
+          </p>
         </div>
       </div>
     </aside>

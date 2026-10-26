@@ -129,7 +129,7 @@ export const pondConfig = {
     beatPerSpeed: 2.6,
     beatAmplitude: 0.11,
     /** Max bend between neighbouring spine joints (radians). */
-    maxJointBend: 0.32,
+    maxJointBend: 0.24,
     /** Edge avoidance. */
     edgeMargin: 1.6,
     edgeForce: 3.2,

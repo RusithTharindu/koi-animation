@@ -48,6 +48,18 @@ export class InputController {
     this.pointers.forEach(cb);
   }
 
+  /** Bleeds off velocity of pointers that have stopped sending events. */
+  decay(dt: number) {
+    const now = performance.now();
+    const k = Math.exp(-12 * dt);
+    this.pointers.forEach((p) => {
+      if (now - p.lastTime > 40) {
+        p.vx *= k;
+        p.vy *= k;
+      }
+    });
+  }
+
   dispose() {
     for (const [type, fn] of this.listeners) this.el.removeEventListener(type, fn);
     this.listeners.length = 0;

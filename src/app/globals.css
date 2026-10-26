@@ -10,3 +10,41 @@ body {
   color: #f2efe6;
   overscroll-behavior: none;
 }
+
+/* The custom cursor replaces the native one over the pond (mouse and pen only). */
+@media (hover: hover) and (pointer: fine) {
+  .pond-root canvas {
+    cursor: none;
+  }
+}
+
+.pond-range {
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, rgb(153 246 228 / 0.8) var(--fill), rgb(255 255 255 / 0.15) var(--fill));
+  cursor: pointer;
+}
+
+.pond-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #f2fffd;
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.35);
+}
+
+.pond-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: #f2fffd;
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.35);
+}
+
+.pond-range:focus-visible {
+  outline: 2px solid rgb(153 246 228 / 0.8);
+  outline-offset: 4px;
+}

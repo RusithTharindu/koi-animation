@@ -160,8 +160,9 @@ export class Koi {
     const cfg = pondConfig.fish;
     let diff = desiredAngle - this.heading;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    // Fast fish turn more lazily; panicking fish snap around.
-    const maxTurn = cfg.maxTurnRate * turnScale;
+    // Turning needs forward motion: a drifting koi turns slowly instead of spinning on the spot.
+    const swimFactor = clamp(this.speed / Math.max(cfg.cruiseSpeed * this.length, 1e-3), 0.25, 1.1);
+    const maxTurn = cfg.maxTurnRate * turnScale * swimFactor;
     const wantTurn = clamp(diff * 2.4, -maxTurn, maxTurn);
     this.turnRate = damp(this.turnRate, wantTurn, 5, dt);
     this.heading += this.turnRate * dt;
@@ -215,7 +216,8 @@ export class Koi {
 
     // Shadow: shallower fish cast offset, softer, fainter shadows.
     const height = 1 - depth;
-    const sz = Math.max(sunZ, 0.3);
+    // Cap the throw of low-sun shadows so they stay readable.
+    const sz = Math.max(sunZ, 0.5);
     const offset = cfg.shadow.maxOffset * height;
     (su.uOffset.value as Vector2).set((-sunX / sz) * offset, (-sunY / sz) * offset);
     const shadowSoft = lerp(cfg.shadow.softnessMin, cfg.shadow.softnessMax, height);

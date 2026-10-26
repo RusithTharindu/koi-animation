@@ -11,6 +11,8 @@ export function FishControls() {
   const addFish = usePondStore((s) => s.addFish);
   const removeLast = usePondStore((s) => s.removeLast);
   const clearFish = usePondStore((s) => s.clearFish);
+  const picking = usePondStore((s) => s.mode === "remove");
+  const setMode = usePondStore((s) => s.setMode);
   const max = pondConfig.fish.maxCount;
   // Leaving fish still hold a slot until their dive animation finishes.
   const full = total >= max;
@@ -59,12 +61,21 @@ export function FishControls() {
       </div>
       {full && <p className="text-[11px] text-amber-200/80">The pond is full ({max} koi keeps it smooth).</p>}
 
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button
+          tone={picking ? "active" : "default"}
+          aria-pressed={picking}
+          onClick={() => setMode(picking ? "ripple" : "remove")}
+          disabled={count === 0 && !picking}
+          title="Click a koi in the pond to remove it"
+        >
+          {picking ? "Picking…" : "Pick koi"}
+        </Button>
         <Button onClick={removeLast} disabled={count === 0}>
           Remove last
         </Button>
         <Button onClick={clearFish} disabled={count === 0} tone="danger">
-          Clear pond
+          Clear
         </Button>
       </div>
     </section>
