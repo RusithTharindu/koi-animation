@@ -1,6 +1,6 @@
 # Mizuniwa
 
-_水庭 — "water garden"._ A koi pond you can touch.
+_水庭 - "water garden"._ A koi pond you can touch.
 
 ![Mizuniwa: Kohaku, Sanke, Showa, Ogon, Tancho and Butterfly koi swimming over a pebble floor with caustics, lily pads and a water lily on the left, and the control panel on the right](docs/screenshot.jpg)
 
@@ -60,7 +60,7 @@ Sliders control ripple strength, ripple damping, swim speed and time of day. Lig
 ```
 src/
   app/            layout + page (server components)
-  config/         pond.config.ts – every tunable constant
+  config/         pond.config.ts - every tunable constant
   store/          Zustand store: fish list, mode, parameters, pause, quality
   scene/          PondCanvas (R3F canvas, adaptive quality), PondEngine, lighting, shared uniforms
   water/          RippleSimulation (GPU), PondFloor, WaterSurface, FloatingElements
@@ -142,7 +142,7 @@ Trade-offs and their defaults:
   - koi swim slower and leave no wakes
   - caustics move at 30% speed
   - panel and cursor animations are instant
-- Panel controls are real buttons, radios and range inputs with labels and live regions. The whole panel is keyboard reachable, and keys `1`–`6`, `P` and `Esc` work too.
+- Panel controls are real buttons, radios and range inputs with labels and live regions. The whole panel is keyboard reachable, and keys `1`-`6`, `P` and `Esc` work too.
 
 ## Cleanup
 

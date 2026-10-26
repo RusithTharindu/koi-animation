@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mizuniwa — a koi pond you can touch",
+  title: "Mizuniwa - a koi pond you can touch",
   description: "An interactive, hyper-realistic koi pond built with WebGL and GSAP.",
 };
 

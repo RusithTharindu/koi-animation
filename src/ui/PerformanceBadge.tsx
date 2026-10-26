@@ -13,7 +13,7 @@ export function PerformanceBadge() {
   const sim = pondConfig.quality.levels[level].simResolution;
   return (
     <p className="font-mono text-[10px] text-white/45" title={`Ripple simulation: ${sim} texels on the short side`}>
-      {fps > 0 ? `${fps} fps` : "measuring…"} · {LEVEL_NAMES[level] ?? level} quality {locked ? "(fixed)" : "(auto)"}
+      {fps > 0 ? `${fps} fps` : "measuring..."} · {LEVEL_NAMES[level] ?? level} quality {locked ? "(fixed)" : "(auto)"}
     </p>
   );
 }
