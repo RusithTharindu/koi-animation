@@ -119,8 +119,11 @@ uniform vec2 uSimTexel;
 uniform float uNormalStrength;
 
 vec3 waterNormal(vec2 simUv) {
-  vec2 grad = texture2D(uSim, simUv).ba;
-  return normalize(vec3(-grad * uNormalStrength, 1.0));
+  vec2 slope = -texture2D(uSim, simUv).ba * uNormalStrength;
+  // Cap the tilt (~31 degrees) so stacked taps cannot turn the surface into an extreme lens.
+  float len = length(slope);
+  slope *= min(1.0, 0.6 / max(len, 1e-5));
+  return normalize(vec3(slope, 1.0));
 }
 
 float waterHeight(vec2 simUv) {
