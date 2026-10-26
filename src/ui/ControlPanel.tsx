@@ -80,7 +80,7 @@ export function ControlPanel() {
         aria-controls="pond-controls"
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="text-sm font-semibold tracking-wide">Koi Pond</span>
+        <span className="text-sm font-semibold tracking-wide">Mizuniwa</span>
         <span
           aria-hidden
           className={`text-white/70 transition-transform duration-300 ${open ? "rotate-180" : ""}`}

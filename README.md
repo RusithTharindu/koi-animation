@@ -1,6 +1,8 @@
-# Koi Pond Playground
+# Mizuniwa
 
-![Koi pond with Asagi, Ogon, Kohaku and Tancho koi swimming among lily pads, ripple rings refracting the pebble floor, and the control panel on the right](docs/screenshot.jpg)
+_水庭 — "water garden"._ A koi pond you can touch.
+
+![Mizuniwa: Kohaku, Sanke, Showa, Ogon, Tancho and Butterfly koi swimming over a pebble floor with caustics, lily pads and a water lily on the left, and the control panel on the right](docs/screenshot.jpg)
 
 An interactive, realistic koi pond in the browser. Koi with spine-driven swimming school around a pebble pond. You can poke the water and watch ripples refract the floor, feed the fish, scare them, or drag a finger through the water.
 
