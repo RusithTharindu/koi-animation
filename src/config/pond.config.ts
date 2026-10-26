@@ -128,6 +128,30 @@ export const pondConfig = {
     beatBaseHz: 0.7,
     beatPerSpeed: 2.6,
     beatAmplitude: 0.11,
+    /** Burst-and-coast swimming. */
+    glide: {
+      /** Half tail beats between glides. */
+      halfBeatsMin: 3,
+      halfBeatsMax: 9,
+      durationMin: 0.6,
+      durationMax: 1.8,
+      /** Drag while coasting (per second) and the speed it decays towards, relative to cruise. */
+      drag: 0.5,
+      coastFloor: 0.3,
+      /** Glide ends early below this fraction of cruise speed. */
+      resumeBelow: 0.6,
+      /** Strokes aim this far above cruise to make up for the glides. */
+      strokeBoost: 1.15,
+      /** No gliding while turning harder than this (radians off the desired heading). */
+      maxTurn: 0.6,
+      /** Tail beat frequency and amplitude while fully gliding. */
+      beatScale: 0.25,
+      amplitudeScale: 0.1,
+      /** Forward surge from each half beat, as a fraction of speed. */
+      surge: 0.08,
+    },
+    /** Gill breathing rate (Hz) at rest and at one body length / second. */
+    breathHz: [0.9, 1.6] as const,
     /** Max bend between neighbouring spine joints (radians). */
     maxJointBend: 0.24,
     /** Edge avoidance. */

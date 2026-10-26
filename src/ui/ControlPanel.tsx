@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useRef, useState, useSyncExternalStore } from "react";
 import { usePondStore } from "@/store/pondStore";
 import { Button } from "./Button";
+import { Credits } from "./Credits";
 import { FishControls } from "./FishControls";
 import { ModePicker } from "./ModePicker";
 import { PerformanceBadge } from "./PerformanceBadge";
@@ -112,6 +113,9 @@ export function ControlPanel() {
               Keys: 1-6 cursor modes · P pause · Esc stop removing
             </p>
             <PerformanceBadge />
+          </div>
+          <div data-stagger className="border-t border-white/10 pt-3">
+            <Credits />
           </div>
         </div>
       </div>

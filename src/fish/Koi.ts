@@ -58,6 +58,20 @@ export class Koi {
   /** Direction to bolt in while panicking. */
   fleeAngle = 0;
   leaving = false;
+  /** 0..1 smoothed glide amount: 1 = coasting with the tail held still. */
+  glide = 0;
+  /** 0..1 how hard the koi is braking (speed above target); flares the fins. */
+  brake = 0;
+  /** -1..1 eye roll towards the turn or a glance target. */
+  gaze = 0;
+  breath = 0;
+  private gliding = false;
+  private glideTimer = 0;
+  /** Half tail beats left before the next chance to glide. */
+  private strokesLeft = 0;
+  private halfBeat = 0;
+  private glanceTarget = 0;
+  private glanceTimer = 0;
   readonly behaviour: KoiBehaviour = { speedMul: 1, panic: 0, appear: 0, dive: 0 };
 
   readonly joints = new Float32Array(N * 2);
@@ -80,6 +94,9 @@ export class Koi {
     this.depth = lerp(cfg.depth.min, cfg.depth.max, this.rng());
     this.targetDepth = this.depth;
     this.phase = this.rng() * TAU;
+    this.halfBeat = Math.floor(this.phase / Math.PI);
+    this.strokesLeft = this.nextStrokes();
+    this.breath = this.rng() * TAU;
 
     // Lay the spine out straight behind the head.
     const seg = this.baseLength / (N - 1);
@@ -105,6 +122,9 @@ export class Koi {
       uPelvic: { value: 0.6 },
       uDorsal: { value: d.dorsal },
       uPhase: { value: 0 },
+      uGaze: { value: 0 },
+      uBreath: { value: 0 },
+      uIris: { value: new Color(...d.iris) },
       uOffset: { value: new Vector2() },
       uBase: { value: new Color(...d.base) },
       uPatch: { value: new Color(...d.patch) },
@@ -154,10 +174,16 @@ export class Koi {
 
   /**
    * Turns towards `desiredAngle`, moves forward and rebuilds the spine.
+   *
+   * Koi swim burst-and-coast: a few tail beats, then a glide with the tail
+   * held straight while drag slowly bleeds off speed. Urgent swimming
+   * (panic, sharp turns) keeps them stroking.
    * @param targetSpeed world units / second
+   * @param urgency 0..1, suppresses gliding
    */
-  integrate(dt: number, desiredAngle: number, targetSpeed: number, turnScale: number) {
+  integrate(dt: number, desiredAngle: number, targetSpeed: number, turnScale: number, urgency = 0) {
     const cfg = pondConfig.fish;
+    const gc = cfg.glide;
     let diff = desiredAngle - this.heading;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     // Turning needs forward motion: a drifting koi turns slowly instead of spinning on the spot.
@@ -167,19 +193,72 @@ export class Koi {
     this.turnRate = damp(this.turnRate, wantTurn, 5, dt);
     this.heading += this.turnRate * dt;
 
-    this.speed = damp(this.speed, targetSpeed, targetSpeed > this.speed ? 2.2 : 1.1, dt);
-    this.x += Math.cos(this.heading) * this.speed * dt;
-    this.y += Math.sin(this.heading) * this.speed * dt;
+    const length = this.length;
+    const canGlide = urgency < 0.1 && Math.abs(diff) < gc.maxTurn;
+    if (this.gliding) {
+      this.glideTimer -= dt;
+      // A koi that has slowed too far, needs to turn or is startled kicks again.
+      if (!canGlide || this.glideTimer <= 0 || this.speed < targetSpeed * gc.resumeBelow) {
+        this.gliding = false;
+        this.strokesLeft = this.nextStrokes();
+      }
+    }
+    this.glide = damp(this.glide, this.gliding ? 1 : 0, this.gliding ? 2.5 : 7, dt);
+
+    if (this.gliding) {
+      this.speed = damp(this.speed, targetSpeed * gc.coastFloor, gc.drag, dt);
+    } else {
+      // Strokes overshoot the cruise speed a little to make up for the glides.
+      const want = targetSpeed * (canGlide ? gc.strokeBoost : 1);
+      this.speed = damp(this.speed, want, want > this.speed ? 2.2 : 1.1, dt);
+    }
+    this.brake = damp(this.brake, clamp((this.speed - targetSpeed) / Math.max(cfg.cruiseSpeed * length * 0.6, 1e-3), 0, 1), 4, dt);
+
+    // Each half beat pushes the body forward, so speed surges at twice the beat frequency.
+    const stroke = 1 - this.glide;
+    const surge = 1 + gc.surge * stroke * Math.cos(this.phase * 2);
+    this.x += Math.cos(this.heading) * this.speed * surge * dt;
+    this.y += Math.sin(this.heading) * this.speed * surge * dt;
     this.depth = damp(this.depth, this.targetDepth, 0.35, dt);
 
-    const length = this.length;
     const bodyLengthsPerSec = this.speed / Math.max(length, 1e-3);
-    const beatHz = cfg.beatBaseHz + cfg.beatPerSpeed * bodyLengthsPerSec;
+    const beatHz = (cfg.beatBaseHz + cfg.beatPerSpeed * bodyLengthsPerSec) * lerp(1, gc.beatScale, this.glide);
     this.phase += TAU * beatHz * dt;
 
+    // Glides start as the tail passes the midline so it comes to rest straight.
+    const half = Math.floor(this.phase / Math.PI);
+    if (half !== this.halfBeat) {
+      this.halfBeat = half;
+      this.strokesLeft--;
+      if (!this.gliding && canGlide && this.strokesLeft <= 0) {
+        this.gliding = true;
+        this.glideTimer = lerp(gc.durationMin, gc.durationMax, this.rng());
+      }
+    }
+
+    this.updateEyes(dt);
+    this.breath += TAU * lerp(cfg.breathHz[0], cfg.breathHz[1], clamp(bodyLengthsPerSec, 0, 1)) * dt;
+
     solveChain(this.joints, N, this.x, this.y, this.heading, length / (N - 1), cfg.maxJointBend);
-    const thrust = clamp(0.3 + bodyLengthsPerSec * 1.4, 0.3, 1.5);
+    const thrust = clamp(0.3 + bodyLengthsPerSec * 1.4, 0.3, 1.5) * lerp(1, gc.amplitudeScale, this.glide);
     applyUndulation(this.joints, this.spine, N, this.phase, cfg.beatAmplitude * length * thrust);
+  }
+
+  private nextStrokes() {
+    const gc = pondConfig.fish.glide;
+    return Math.round(lerp(gc.halfBeatsMin, gc.halfBeatsMax, this.rng()));
+  }
+
+  /** Eyes roll into turns and now and then glance to one side. */
+  private updateEyes(dt: number) {
+    this.glanceTimer -= dt;
+    if (this.glanceTimer <= 0) {
+      this.glanceTimer = lerp(0.8, 3.5, this.rng());
+      this.glanceTarget = this.rng() < 0.4 ? 0 : (this.rng() - 0.5) * 1.2;
+    }
+    const target = clamp(this.turnRate * 0.5 + this.glanceTarget, -1, 1);
+    // Fast, saccade-like rolls.
+    this.gaze = damp(this.gaze, target, 9, dt);
   }
 
   /** Pushes the current state into shader uniforms. */
@@ -195,6 +274,8 @@ export class Koi {
     u.uHalfWidth.value = length * cfg.widthRatio;
     u.uDepth.value = depth;
     u.uPhase.value = this.phase;
+    u.uGaze.value = this.gaze;
+    u.uBreath.value = Math.sin(this.breath);
     const soft = lerp(0.012, cfg.depth.blurAtDeepest, depth);
     u.uSoft.value = soft;
     u.uPad.value = soft * 1.5 + 0.01;
@@ -202,17 +283,19 @@ export class Koi {
     u.uHighlight.value = highlight;
 
     // The tail fin lags the body wave and swings outward on turns.
-    const thrust = clamp(0.3 + speedNorm * 0.6, 0.3, 1.4);
+    // While gliding the tail eases straight and only trails the turn.
+    const thrust = clamp(0.3 + speedNorm * 0.6, 0.3, 1.4) * lerp(1, 0.15, this.glide);
     u.uTailBend.value = Math.cos(this.phase - Math.PI * 1.7) * 0.55 * thrust - this.turnRate * 0.18;
 
-    // Pectoral fins: spread and row when slow, tuck in when fast; the inner fin brakes on turns.
+    // Pectoral fins: spread and row when slow, tuck in when fast, half open to steady a glide,
+    // flared wide to brake; the inner fin brakes on turns.
     const slow = 1 - clamp(speedNorm, 0, 1);
-    const spread = lerp(0.35, 1.15, slow);
-    const row = Math.sin(this.phase * 0.5) * 0.22 * slow;
+    const spread = lerp(0.35, 1.15, slow) + this.glide * 0.15 * (1 - slow) + this.brake * 0.55;
+    const row = Math.sin(this.breath * 0.9) * 0.2 * slow * (1 - this.brake);
     const turn = clamp(this.turnRate * 0.25, -0.4, 0.4);
     u.uFinL.value = spread + row + turn;
     u.uFinR.value = spread - row - turn;
-    u.uPelvic.value = lerp(0.3, 0.75, slow);
+    u.uPelvic.value = lerp(0.3, 0.75, slow) + this.brake * 0.3;
 
     // Shadow: shallower fish cast offset, softer, fainter shadows.
     const height = 1 - depth;
