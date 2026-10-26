@@ -150,7 +150,7 @@ vec3 koiPattern(vec2 bp, float u, float s) {
     float hi = fbm(bp * 0.42 + seed) + 0.22 * back
       - 0.12 * smoothstep(0.8, 0.95, u)
       - 0.3 * (1.0 - smoothstep(0.02, 0.1, u));
-    col = mix(col, uPatch, smoothstep(0.5, 0.55, hi));
+    col = mix(col, uPatch, smoothstep(0.56, 0.6, hi));
     if (uPattern > 0.5) {
       float sumi = fbm(bp * 1.05 + seed * 2.3 + 5.0) + 0.1 * back;
       float m = smoothstep(0.64, 0.68, sumi) * smoothstep(0.2, 0.28, u) * smoothstep(0.95, 0.7, abs(s));
@@ -177,8 +177,8 @@ vec3 koiPattern(vec2 bp, float u, float s) {
     col = mix(col, uPatch, max(sides, cheeks));
   } else if (uPattern < 5.5) {
     // Tancho: a single red crown on the head.
-    vec2 d = bp - vec2(0.95, 0.0);
-    float r = 0.6 + 0.05 * sin(atan(d.y, d.x) * 3.0 + seed);
+    vec2 d = bp - vec2(1.15, 0.0);
+    float r = 0.42 + 0.03 * sin(atan(d.y, d.x) * 3.0 + seed);
     col = mix(col, uPatch, smoothstep(r + 0.04, r - 0.04, length(d)));
   } else {
     // Butterfly: platinum with orange and yellow patches.
@@ -214,7 +214,7 @@ void main() {
     vec2 bp = vec2(a * 8.0, lat / uHalfWidth);
     col = koiPattern(bp, a, s);
     float edges = scaleEdges(bp);
-    col *= 1.0 - edges * (uPattern > 3.5 && uPattern < 4.5 ? 0.38 : 0.045);
+    col *= 1.0 - edges * (uPattern > 3.5 && uPattern < 4.5 ? 0.2 : 0.045);
 
     // Eyes, just visible from above.
     float eye = length(vec2(bp.x - 0.62, abs(bp.y) - 0.5));

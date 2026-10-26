@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useReducedMotionSync } from "@/lib/useReducedMotion";
+import { ControlPanel } from "./ControlPanel";
 
 // WebGL needs the browser: never prerender the canvas.
 const PondCanvas = dynamic(() => import("@/scene/PondCanvas"), {
@@ -14,6 +15,7 @@ export default function PondApp() {
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#0d2a2a] select-none">
       <PondCanvas />
+      <ControlPanel />
     </main>
   );
 }
