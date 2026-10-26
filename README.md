@@ -2,6 +2,8 @@
 
 _水庭 — "water garden"._ A koi pond you can touch.
 
+![Koi pond with Asagi, Ogon, Kohaku and Tancho koi swimming among lily pads, ripple rings refracting the pebble floor, and the control panel on the right](docs/screenshot.jpg)
+
 An interactive, realistic koi pond in the browser. Koi with spine-driven swimming school around a pebble pond. You can poke the water and watch ripples refract the floor, feed the fish, scare them, or drag a finger through the water.
 
 Built with **Next.js (App Router) + TypeScript**, **React Three Fiber / three.js** with custom GLSL shaders, **GSAP**, **Zustand** and **Tailwind CSS**.

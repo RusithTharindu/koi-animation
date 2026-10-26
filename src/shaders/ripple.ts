@@ -46,6 +46,8 @@ void main() {
   s.g *= uDamping;
   s.r += s.g;
   s.r *= uDecay;
+  // Bound the height so repeated taps on one spot cannot build up without limit.
+  s.r = clamp(s.r, -2.5, 2.5);
 
   // Pond walls soak up a little energy so reflections do not ring forever.
   vec2 edge = min(vUv, 1.0 - vUv) / uTexel;
