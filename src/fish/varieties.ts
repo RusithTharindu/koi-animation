@@ -8,6 +8,8 @@ export interface VarietyDef {
   patch: [number, number, number];
   patch2: [number, number, number];
   fin: [number, number, number];
+  /** Iris ring around the pupil. */
+  iris: [number, number, number];
   /** 0 = matte, 1 = full metallic (Ogon / Butterfly sheen). */
   metallic: number;
   /** Pectoral fin length relative to body length. */
@@ -33,6 +35,10 @@ export const PATTERN = {
 const WHITE: [number, number, number] = [0.96, 0.94, 0.89];
 const HI_RED: [number, number, number] = [0.86, 0.2, 0.08];
 const SUMI: [number, number, number] = [0.06, 0.06, 0.07];
+/** Most koi have a dark bronze iris with a gold rim; metallic varieties shine silver-gold. */
+const IRIS_BRONZE: [number, number, number] = [0.52, 0.38, 0.2];
+const IRIS_GOLD: [number, number, number] = [0.82, 0.66, 0.36];
+const IRIS_SILVER: [number, number, number] = [0.72, 0.72, 0.68];
 
 export const VARIETIES: Record<KoiVariety, VarietyDef> = {
   kohaku: {
@@ -42,6 +48,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: HI_RED,
     patch2: SUMI,
     fin: [0.97, 0.95, 0.92],
+    iris: IRIS_BRONZE,
     metallic: 0.05,
     finLength: 0.2,
     tailLength: 0.3,
@@ -55,6 +62,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: [0.88, 0.22, 0.09],
     patch2: SUMI,
     fin: [0.95, 0.94, 0.9],
+    iris: IRIS_BRONZE,
     metallic: 0.05,
     finLength: 0.2,
     tailLength: 0.3,
@@ -68,6 +76,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: [0.84, 0.18, 0.07],
     patch2: SUMI,
     fin: [0.32, 0.3, 0.3],
+    iris: [0.4, 0.3, 0.18],
     metallic: 0.05,
     finLength: 0.21,
     tailLength: 0.3,
@@ -81,6 +90,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: [1.0, 0.86, 0.5],
     patch2: [0.8, 0.52, 0.16],
     fin: [1.0, 0.82, 0.45],
+    iris: IRIS_GOLD,
     metallic: 1,
     finLength: 0.2,
     tailLength: 0.3,
@@ -94,6 +104,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: [0.9, 0.42, 0.16],
     patch2: [0.86, 0.88, 0.88],
     fin: [0.92, 0.55, 0.3],
+    iris: [0.46, 0.42, 0.3],
     metallic: 0.1,
     finLength: 0.2,
     tailLength: 0.3,
@@ -107,6 +118,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: [0.9, 0.12, 0.08],
     patch2: SUMI,
     fin: [0.98, 0.97, 0.95],
+    iris: IRIS_BRONZE,
     metallic: 0.08,
     finLength: 0.2,
     tailLength: 0.3,
@@ -120,6 +132,7 @@ export const VARIETIES: Record<KoiVariety, VarietyDef> = {
     patch: [1.0, 0.56, 0.14],
     patch2: [0.98, 0.78, 0.36],
     fin: [1.0, 0.9, 0.78],
+    iris: IRIS_SILVER,
     metallic: 0.75,
     finLength: 0.36,
     tailLength: 0.52,

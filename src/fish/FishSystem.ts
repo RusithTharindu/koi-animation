@@ -331,6 +331,8 @@ export class FishSystem {
     const motion = reducedMotion ? pondConfig.reducedMotion.swimScale : 1;
     const cruise = cfg.cruiseSpeed * length * koi.temperament * b.speedMul * params.swimSpeed * motion * acc.speedMul;
     const speed = cruise + b.panic * cfg.panicSpeed * length * motion;
-    koi.integrate(dt, Math.atan2(dy, dx), speed, 1 + b.panic * 2.2);
+    // Chasing food or a hand keeps koi stroking rather than coasting.
+    const urgency = Math.max(b.panic, acc.speedMul > 1.05 ? 1 : 0);
+    koi.integrate(dt, Math.atan2(dy, dx), speed, 1 + b.panic * 2.2, urgency);
   }
 }

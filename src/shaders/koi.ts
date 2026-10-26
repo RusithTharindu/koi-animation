@@ -135,6 +135,9 @@ uniform float uHighlight;
 uniform float uDorsal;
 uniform float uPhase;
 uniform float uShadowStrength;
+uniform float uGaze;
+uniform float uBreath;
+uniform vec3 uIris;
 
 varying vec3 vFish;
 varying vec2 vLocal;
@@ -189,6 +192,61 @@ vec3 koiPattern(vec2 bp, float u, float s) {
   return col;
 }
 
+/* Eye centre and radius in body-pattern space (x = 8 units per length, y = half-widths). */
+const vec2 EYE_C = vec2(0.72, 0.53);
+const float EYE_R = 0.125;
+
+/*
+ * A koi eye seen from above: a glossy dome on the side of the head whose
+ * axis points outward and slightly up, so the iris and pupil appear as
+ * offset ellipses. fwdW / outW are the head-ward and outward directions in
+ * world space. Returns the shaded colour; coverage goes to cover.
+ */
+vec3 koiEye(vec2 bp, vec3 skin, vec2 fwdW, vec2 outW, vec3 L, out float cover) {
+  // Eye-local coordinates: x towards the nose, y outward, unit radius.
+  vec2 q = vec2(EYE_C.x - bp.x, abs(bp.y) - EYE_C.y) / EYE_R;
+  float r = length(q);
+  float aa = max(fwidth(r), 1e-3) * 1.2;
+  cover = smoothstep(1.0 + aa, 1.0 - aa, r);
+
+  // Soft socket shadow around the bulge.
+  float socket = smoothstep(1.55, 1.0, r) * (1.0 - cover);
+  vec3 col = skin * (1.0 - 0.3 * socket);
+  if (cover <= 0.0) return col;
+
+  vec3 P = vec3(q, sqrt(max(1.0 - r * r, 0.0)));
+  // Eye axis: mostly outward, tilted up, rolled forward/back by the gaze.
+  vec3 axis = normalize(vec3(uGaze * 0.45 + 0.08, 0.78, 0.6));
+  float c = dot(P, axis);
+  float caa = max(fwidth(c), 1e-3);
+  float iris = smoothstep(0.32 - caa, 0.32 + caa, c);
+  float pupil = smoothstep(0.8 - caa, 0.8 + caa, c);
+
+  // Iris: radial fibres, darker towards the pupil, a bright gold rim.
+  vec3 side = normalize(cross(axis, vec3(0.0, 0.0, 1.0)));
+  vec3 up = cross(side, axis);
+  float fibreAngle = atan(dot(P, up), dot(P, side));
+  float fibres = 0.8 + 0.3 * vnoise(vec2(fibreAngle * 5.0 + uSeed * 40.0, c * 6.0));
+  float ring = smoothstep(0.32, 0.8, c);
+  vec3 irisCol = uIris * fibres * mix(1.35, 0.6, ring);
+  // Gold rim where the iris meets the pupil.
+  irisCol += uIris * 0.6 * smoothstep(0.66, 0.78, c) * (1.0 - pupil);
+  // Eyeball outside the iris: dark, slightly translucent tissue.
+  vec3 ball = mix(skin * 0.35, vec3(0.08, 0.07, 0.06), 0.6);
+  vec3 eyeCol = mix(ball, irisCol, iris);
+  eyeCol = mix(eyeCol, vec3(0.015, 0.016, 0.02), pupil);
+
+  // Glossy cornea: sun glint, a broad sky reflection and a darker rim.
+  vec3 n = normalize(vec3(fwdW * P.x + outW * P.y, P.z));
+  vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+  float glint = pow(max(dot(n, H), 0.0), 160.0);
+  float sky = smoothstep(0.55, 0.95, dot(n, normalize(vec3(-outW * 0.3, 1.0)))) * 0.12;
+  float rim = smoothstep(0.3, 0.0, P.z);
+  eyeCol *= (uAmbient * 1.1 + uSunColor * max(dot(n, L), 0.0) * 0.6) * (1.0 - 0.35 * rim);
+  eyeCol += uSunColor * (glint * 1.6 + sky);
+  return mix(col, eyeCol, cover);
+}
+
 /* Overlapping scale arcs; returns ~1 on scale edges. */
 float scaleEdges(vec2 bp) {
   vec2 g = bp * 2.7;
@@ -213,13 +271,18 @@ void main() {
     float s = clamp(lat / max(hw, 1e-4), -1.0, 1.0);
     vec2 bp = vec2(a * 8.0, lat / uHalfWidth);
     col = koiPattern(bp, a, s);
-    float edges = scaleEdges(bp);
+    // The head is smooth skin; scales start behind the gill covers.
+    float scaled = smoothstep(1.45, 2.0, bp.x);
+    float edges = scaleEdges(bp) * scaled;
     col *= 1.0 - edges * (uPattern > 3.5 && uPattern < 4.5 ? 0.2 : 0.045);
 
-    // Eyes, just visible from above.
-    float eye = length(vec2(bp.x - 0.62, abs(bp.y) - 0.5));
-    col = mix(col, vec3(0.05, 0.05, 0.06), smoothstep(0.1, 0.07, eye));
-    col += vec3(0.5) * smoothstep(0.035, 0.0, length(vec2(bp.x - 0.6, abs(bp.y) - 0.47)));
+    // Gill cover edge: a curved crease that flexes as the koi breathes.
+    float gillX = 1.55 + 0.45 * s * s + 0.035 * uBreath;
+    float gill = smoothstep(0.07, 0.0, abs(bp.x - gillX)) * smoothstep(0.3, 0.6, abs(s));
+    float cheek = smoothstep(gillX, gillX - 0.5, bp.x) * smoothstep(0.25, 0.8, abs(s));
+    col *= 1.0 - 0.16 * gill - 0.05 * cheek * (0.6 + 0.4 * uBreath);
+    // Nostrils ahead of the eyes.
+    col *= 1.0 - 0.25 * smoothstep(0.035, 0.012, length(vec2(bp.x - 0.36, abs(bp.y) - 0.28)));
 
     // Cylindrical body normal for lighting.
     vec3 n = normalize(vec3(vPerp * s * 0.85, sqrt(max(1.0 - s * s * 0.75, 0.05))));
@@ -233,6 +296,12 @@ void main() {
     col = col * (uAmbient * 0.95 + uSunColor * lam * 0.7) + uSunColor * specCol * spec;
     // Shimmer on metallic scales.
     col += uMetallic * 0.12 * uSunColor * (1.0 - edges) * vnoise(bp * 6.0 + uPhase * 0.3);
+
+    // Eyes go on last: they carry their own lighting.
+    vec2 fwdW = vec2(vPerp.y, -vPerp.x);
+    vec2 outW = vPerp * (lat < 0.0 ? -1.0 : 1.0);
+    float eyeCover;
+    col = koiEye(bp, col, fwdW, outW, L, eyeCover);
 #endif
   } else if (part < 1.5) {
     float wave = 0.06 * sin(b * 6.0 + uPhase * 1.3) * step(0.3, uDorsal);
