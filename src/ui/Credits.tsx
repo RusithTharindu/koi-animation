@@ -7,7 +7,8 @@ export function Credits() {
       data-ui
       // Keep clicks on the credit from rippling the pond underneath.
       onPointerDown={(e) => e.stopPropagation()}
-      className="pointer-events-auto absolute bottom-4 left-4 z-20 flex items-center gap-2 rounded-full border border-white/15 bg-[#0b1f1f]/55 py-1 pr-1 pl-3.5 text-[11px] text-white/70 shadow-lg shadow-black/30 backdrop-blur-xl"
+      // Stays faint over the pond; comes forward on hover or keyboard focus.
+      className="pointer-events-auto absolute bottom-4 left-4 z-20 flex items-center gap-2 rounded-full opacity-50 transition-opacity duration-300 hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none border border-white/15 bg-[#0b1f1f]/55 py-1 pr-1 pl-3.5 text-[11px] text-white/70 shadow-lg shadow-black/30 backdrop-blur-xl"
     >
       <p>
         Made with{" "}
