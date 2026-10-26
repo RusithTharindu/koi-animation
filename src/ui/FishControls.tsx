@@ -69,7 +69,7 @@ export function FishControls() {
           disabled={count === 0 && !picking}
           title="Click a koi in the pond to remove it"
         >
-          {picking ? "Picking…" : "Pick koi"}
+          {picking ? "Picking..." : "Pick koi"}
         </Button>
         <Button onClick={removeLast} disabled={count === 0}>
           Remove last

@@ -109,7 +109,7 @@ export function ControlPanel() {
           </div>
           <div data-stagger className="space-y-1">
             <p className="text-[10px] leading-relaxed text-white/40">
-              Keys: 1–6 cursor modes · P pause · Esc stop removing
+              Keys: 1-6 cursor modes · P pause · Esc stop removing
             </p>
             <PerformanceBadge />
           </div>
