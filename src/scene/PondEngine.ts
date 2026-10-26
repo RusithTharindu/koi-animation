@@ -8,6 +8,7 @@ import {
 } from "three";
 import { pondConfig } from "@/config/pond.config";
 import { usePondStore } from "@/store/pondStore";
+import { FishSystem } from "@/fish/FishSystem";
 import { InputController } from "@/interaction/InputController";
 import { ModeController } from "@/interaction/ModeController";
 import { PondFloor } from "@/water/PondFloor";
@@ -32,6 +33,7 @@ export class PondEngine {
   private readonly sim: RippleSimulation;
   private readonly floor: PondFloor;
   private readonly water: WaterSurface;
+  private readonly fish: FishSystem;
   private readonly input: InputController;
   private readonly modes: ModeController;
   private readonly lighting = createLightingState();
@@ -56,6 +58,7 @@ export class PondEngine {
     this.water.setUnderwater(this.underwaterTarget.texture);
 
     this.underwaterScene.add(this.floor.mesh);
+    this.fish = new FishSystem(this.underwaterScene, this.shared);
     this.mainScene.add(this.water.mesh);
     this.camera.position.z = 5;
 
@@ -104,6 +107,7 @@ export class PondEngine {
     this.shared.uSimTexel.value.copy(this.sim.texel);
     this.floor.resize(this.worldW, this.worldH);
     this.water.resize(this.worldW, this.worldH);
+    this.fish.setBounds(this.worldW, this.worldH);
 
     const scale = level.underwaterScale * dpr;
     this.underwaterTarget.setSize(Math.max(1, Math.round(cssW * scale)), Math.max(1, Math.round(cssH * scale)));
@@ -120,8 +124,10 @@ export class PondEngine {
     if (state.paused) {
       this.sim.discardDrops();
     } else {
+      this.fish.update(dt);
       this.sim.step(dt, state.params.rippleDamping);
     }
+    this.fish.syncUniforms();
     this.shared.uSim.value = this.sim.texture;
 
     const r = this.renderer;
@@ -135,6 +141,7 @@ export class PondEngine {
     this.input.dispose();
     this.sim.dispose();
     this.floor.dispose();
+    this.fish.dispose();
     this.water.dispose();
     this.underwaterTarget.dispose();
     this.mainScene.clear();

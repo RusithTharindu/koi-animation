@@ -114,8 +114,8 @@ export const pondConfig = {
       "kohaku",
     ] satisfies KoiVariety[],
     spineSegments: 14,
-    lengthMin: 1.25,
-    lengthMax: 1.85,
+    lengthMin: 1.7,
+    lengthMax: 2.5,
     /** Half-width of the body relative to its length. */
     widthRatio: 0.125,
     /** Swim speed in body lengths / second. */
@@ -161,7 +161,7 @@ export const pondConfig = {
       blurAtDeepest: 0.09,
     },
     shadow: {
-      strength: 0.42,
+      strength: 0.55,
       /** Shadow offset in world units for a fish touching the surface. */
       maxOffset: 0.9,
       softnessMin: 0.06,
