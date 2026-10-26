@@ -55,6 +55,8 @@ export class Koi {
   wander = 0;
   idleTimer = 0;
   scatterCooldown = 0;
+  /** Direction to bolt in while panicking. */
+  fleeAngle = 0;
   leaving = false;
   readonly behaviour: KoiBehaviour = { speedMul: 1, panic: 0, appear: 0, dive: 0 };
 
