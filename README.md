@@ -1,4 +1,6 @@
-# Koi Pond Playground
+# Mizuniwa
+
+_水庭 — "water garden"._ A koi pond you can touch.
 
 An interactive, realistic koi pond in the browser. Koi with spine-driven swimming school around a pebble pond. You can poke the water and watch ripples refract the floor, feed the fish, scare them, or drag a finger through the water.
 
