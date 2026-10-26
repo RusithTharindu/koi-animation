@@ -15,6 +15,10 @@ export class PondFloor {
       uniforms: {
         ...shared,
         uPebbleScale: { value: pondConfig.floor.pebbleScale },
+        uCausticStrength: { value: pondConfig.floor.causticStrength },
+        uCausticScale: { value: pondConfig.floor.causticScale },
+        uCausticSpeed: { value: pondConfig.floor.causticSpeed },
+        uRippleCausticGain: { value: pondConfig.floor.rippleCausticGain },
       },
       depthTest: false,
       depthWrite: false,
@@ -22,6 +26,11 @@ export class PondFloor {
     this.mesh = new Mesh(new PlaneGeometry(1, 1), material);
     this.mesh.renderOrder = 0;
     this.mesh.frustumCulled = false;
+  }
+
+  /** Slows the caustic animation for reduced motion. */
+  setCausticSpeed(speed: number) {
+    this.mesh.material.uniforms.uCausticSpeed.value = speed;
   }
 
   resize(worldW: number, worldH: number) {

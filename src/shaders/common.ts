@@ -76,6 +76,42 @@ vec3 voronoi(vec2 p, out vec2 rel) {
 }
 `;
 
+/*
+ * Animated caustic network: distance to the edges of a Voronoi diagram whose
+ * points orbit over time, so cells morph instead of sliding. Requires glslNoise.
+ */
+export const glslCaustics = /* glsl */ `
+float causticEdges(vec2 p, float t) {
+  vec2 n = floor(p);
+  vec2 f = fract(p);
+  float f1 = 8.0;
+  float f2 = 8.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      vec2 g = vec2(float(i), float(j));
+      vec2 h = hash22(n + g);
+      vec2 o = 0.5 + 0.38 * sin(t * (0.6 + 0.6 * h) + 6.2831 * h);
+      vec2 r = g + o - f;
+      float d = dot(r, r);
+      if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) { f2 = d; }
+    }
+  }
+  return sqrt(f2) - sqrt(f1);
+}
+
+/* 0..~1.5 brightness of the light net at p (world units). */
+float caustics(vec2 p, float t, float scale) {
+  vec2 q = p * scale;
+  q += 0.35 * vec2(vnoise(q * 0.5 + t * 0.1), vnoise(q * 0.5 - t * 0.1 + 7.0));
+  float a = 1.0 - smoothstep(0.0, 0.13, causticEdges(q, t));
+  float b = 1.0 - smoothstep(0.0, 0.13, causticEdges(q * 1.37 + 4.1, t * 1.3));
+  float net = pow(a, 2.5) * 0.7 + pow(b, 2.5) * 0.45 + pow(a * b, 1.2) * 0.9;
+  // Brightness drifts in broad patches, as the surface focuses light unevenly.
+  float patches = smoothstep(0.25, 0.75, vnoise(p * 0.18 + t * 0.05));
+  return net * mix(0.35, 1.0, patches);
+}
+`;
+
 /* Reads the ripple simulation: r = height, g = velocity, ba = height gradient per world unit. */
 export const glslWater = /* glsl */ `
 uniform sampler2D uSim;
@@ -89,6 +125,17 @@ vec3 waterNormal(vec2 simUv) {
 
 float waterHeight(vec2 simUv) {
   return texture2D(uSim, simUv).r;
+}
+
+/* Laplacian of the height per world unit²: negative under crests, which focus sunlight. Needs uWorldSize. */
+float waterFocus(vec2 simUv) {
+  vec2 dx = vec2(uSimTexel.x, 0.0);
+  vec2 dy = vec2(0.0, uSimTexel.y);
+  float h = texture2D(uSim, simUv).r;
+  float lap = texture2D(uSim, simUv + dx).r + texture2D(uSim, simUv - dx).r
+    + texture2D(uSim, simUv + dy).r + texture2D(uSim, simUv - dy).r - 4.0 * h;
+  vec2 texelWorld = uSimTexel * uWorldSize;
+  return lap / (texelWorld.x * texelWorld.y);
 }
 `;
 

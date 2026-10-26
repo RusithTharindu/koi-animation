@@ -1,10 +1,16 @@
-import { glslLighting, glslNoise, glslWater } from "./common";
+import { glslCaustics, glslLighting, glslNoise, glslWater } from "./common";
 
 export const floorFragment = /* glsl */ `
 ${glslLighting}
 ${glslNoise}
 ${glslWater}
+${glslCaustics}
 uniform float uPebbleScale;
+uniform float uCausticStrength;
+uniform float uCausticScale;
+uniform float uCausticSpeed;
+uniform float uRippleCausticGain;
+uniform float uDaylight;
 varying vec2 vWorld;
 varying vec2 vSimUv;
 
@@ -86,6 +92,13 @@ void main() {
   // Lighting.
   float lambert = max(dot(nrm, normalize(uSunDir)), 0.0);
   vec3 lit = col * (uAmbient + uSunColor * lambert * 0.85);
+
+  // Caustics: the animated light net, plus focusing under ripple crests.
+  float focus = clamp(-waterFocus(vSimUv) * uRippleCausticGain, -0.6, 1.8);
+  float net = caustics(p, uTime * uCausticSpeed, uCausticScale);
+  float sunHigh = smoothstep(0.1, 0.6, normalize(uSunDir).z);
+  float light = (net * (0.65 + 0.35 * sunHigh) + focus) * uCausticStrength * uDaylight;
+  lit += uSunColor * col * max(light, -0.3) * (0.6 + 0.4 * lambert);
 
   // Water column absorption.
   lit = mix(lit, uWaterTint, 0.42);

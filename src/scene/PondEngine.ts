@@ -13,6 +13,7 @@ import { FoodSystem } from "@/fish/FoodSystem";
 import { InputController } from "@/interaction/InputController";
 import { ModeController } from "@/interaction/ModeController";
 import { usePondStore } from "@/store/pondStore";
+import { FloatingElements } from "@/water/FloatingElements";
 import { PondFloor } from "@/water/PondFloor";
 import { RippleSimulation } from "@/water/RippleSimulation";
 import { WaterSurface } from "@/water/WaterSurface";
@@ -37,6 +38,7 @@ export class PondEngine {
   private readonly water: WaterSurface;
   private readonly fish: FishSystem;
   private readonly food: FoodSystem;
+  private readonly floaters: FloatingElements;
   private readonly input: InputController;
   private readonly modes: ModeController;
   private readonly lighting = createLightingState();
@@ -68,9 +70,15 @@ export class PondEngine {
       this.ripple(x, y, pondConfig.water.clickRadius * 0.45, pondConfig.water.clickStrength * 0.35),
     );
     this.fish.influences.push(this.food.influence);
+    this.fish.onWake = (x, y, radius, strength) => {
+      const { reducedMotion } = usePondStore.getState();
+      const scale = reducedMotion ? pondConfig.reducedMotion.wakeScale : 1;
+      if (scale > 0) this.sim.addDrop(x, y, radius, strength * scale);
+    };
 
-    this.underwaterScene.add(this.floor.mesh, this.food.points);
-    this.mainScene.add(this.water.mesh);
+    this.floaters = new FloatingElements(this.shared);
+    this.underwaterScene.add(this.floor.mesh, this.floaters.shadow, this.food.points);
+    this.mainScene.add(this.water.mesh, this.floaters.mesh);
     this.camera.position.z = 5;
 
     this.modes = new ModeController({
@@ -88,8 +96,10 @@ export class PondEngine {
 
     const initial = usePondStore.getState();
     this.timeOfDay.value = initial.params.timeOfDay;
+    this.applyMotionPreference(initial.reducedMotion);
     this.unsubscribe = usePondStore.subscribe((state, prev) => {
       if (state.mode !== prev.mode) this.modes.reset();
+      if (state.reducedMotion !== prev.reducedMotion) this.applyMotionPreference(state.reducedMotion);
       if (state.paused !== prev.paused) this.food.setPaused(state.paused);
       if (state.params.timeOfDay !== prev.params.timeOfDay) {
         gsap.to(this.timeOfDay, {
@@ -111,6 +121,7 @@ export class PondEngine {
     const { params, reducedMotion } = usePondStore.getState();
     const scale = (0.25 + 1.5 * params.rippleStrength) * (reducedMotion ? pondConfig.reducedMotion.rippleScale : 1);
     this.sim.addDrop(x, y, radius, strength * scale);
+    this.floaters.shove(x, y, radius, strength * scale);
   }
 
   /** Called every frame with the CSS canvas size; reallocates targets only when something changed. */
@@ -142,6 +153,7 @@ export class PondEngine {
     this.floor.resize(this.worldW, this.worldH);
     this.water.resize(this.worldW, this.worldH);
     this.fish.setBounds(this.worldW, this.worldH);
+    this.floaters.setBounds(this.worldW, this.worldH);
 
     const scale = level.underwaterScale * dpr;
     const h = Math.max(1, Math.round(cssH * scale));
@@ -164,6 +176,9 @@ export class PondEngine {
       this.modes.tick(dt);
       this.fish.update(dt);
       this.sim.step(dt, state.params.rippleDamping);
+      const sun = this.lighting.sunDir;
+      const motion = state.reducedMotion ? pondConfig.reducedMotion.swimScale : 1;
+      this.floaters.update(dt, sun.x, sun.y, sun.z, this.lighting.daylight, motion);
     }
     this.fish.syncUniforms();
     this.food.update();
@@ -184,10 +199,15 @@ export class PondEngine {
     this.floor.dispose();
     this.fish.dispose();
     this.food.dispose();
+    this.floaters.dispose();
     this.water.dispose();
     this.underwaterTarget.dispose();
     this.mainScene.clear();
     this.underwaterScene.clear();
+  }
+
+  private applyMotionPreference(reduced: boolean) {
+    this.floor.setCausticSpeed(pondConfig.floor.causticSpeed * (reduced ? 0.3 : 1));
   }
 
   private applyLighting() {

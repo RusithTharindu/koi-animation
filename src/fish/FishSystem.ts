@@ -30,6 +30,8 @@ export class FishSystem {
   readonly influences: SteeringInfluence[] = [];
   /** Fish under the cursor in remove mode. */
   hoveredId: string | null = null;
+  /** Receives surface disturbances from koi swimming near the top. */
+  onWake: ((x: number, y: number, radius: number, strength: number) => void) | null = null;
 
   private readonly geometry = createKoiGeometry();
   private readonly byId = new Map<string, Koi>();
@@ -68,7 +70,28 @@ export class FishSystem {
   }
 
   update(dt: number) {
-    for (const koi of this.fish) this.steer(koi, dt);
+    for (const koi of this.fish) {
+      this.steer(koi, dt);
+      this.wake(koi, dt);
+    }
+  }
+
+  /** Shallow, moving koi push a faint bow wave into the surface. */
+  private wake(koi: Koi, dt: number) {
+    const cfg = pondConfig.fish.wake;
+    const shallow = 1 - koi.visualDepth / 0.45;
+    if (!this.onWake || shallow <= 0 || koi.behaviour.appear < 0.5) return;
+    const lengthsPerSec = koi.speed / Math.max(koi.length, 1e-3);
+    // Drops are applied once per frame, so scale by dt to stay frame-rate independent.
+    const strength = cfg.strength * shallow * Math.min(lengthsPerSec, 2.5) * dt * 60;
+    if (strength < 1e-4) return;
+    const ahead = koi.length * 0.08;
+    this.onWake(
+      koi.x + Math.cos(koi.heading) * ahead,
+      koi.y + Math.sin(koi.heading) * ahead,
+      cfg.radius * (koi.length / pondConfig.fish.lengthMax) * 1.4,
+      strength,
+    );
   }
 
   syncUniforms() {

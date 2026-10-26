@@ -69,7 +69,7 @@ export const pondConfig = {
     dampingMax: 0.978,
     /** Slow drift of the resting height back to zero. */
     heightDecay: 0.9995,
-    maxDropsPerFrame: 48,
+    maxDropsPerFrame: 64,
     /** Ripple from a click / tap. */
     clickRadius: 0.38,
     clickStrength: 0.9,
@@ -93,11 +93,11 @@ export const pondConfig = {
   },
 
   floor: {
-    causticStrength: 0.85,
-    causticScale: 1.15,
+    causticStrength: 0.6,
+    causticScale: 1.55,
     causticSpeed: 0.35,
-    /** How strongly ripples focus light into caustics. */
-    rippleCausticGain: 14,
+    /** How strongly ripple crests focus light into caustics (per unit of curvature). */
+    rippleCausticGain: 0.02,
     pebbleScale: 1.5,
   },
 
@@ -168,8 +168,8 @@ export const pondConfig = {
       softnessMax: 0.32,
     },
     wake: {
-      radius: 0.2,
-      strength: 0.012,
+      radius: 0.22,
+      strength: 0.01,
     },
     /** Tween durations (seconds). */
     spawnDuration: 1.6,
